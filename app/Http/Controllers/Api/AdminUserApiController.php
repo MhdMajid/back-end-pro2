@@ -23,6 +23,7 @@ class AdminUserApiController extends Controller
     {
         $validatedData = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'phone' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'role' => ['required', 'string', 'in:admin,user'],
             'password' => ['required'],
@@ -31,6 +32,7 @@ class AdminUserApiController extends Controller
         $user = User::create([
             'name' => $validatedData['name'],
             'email' => $validatedData['email'],
+            'phone' => $validatedData['phone'],
             'role' => $validatedData['role'], 
             'password' => Hash::make($validatedData['password']),
         ]);
@@ -52,6 +54,7 @@ class AdminUserApiController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'phone' => ['sometimes', 'required', 'string', 'max:255'],
             'email' => ['sometimes', 'required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class.',email,'.$user->id],
             'role' => ['sometimes', 'required', 'string', 'in:admin,user'], // السماح بتحديث الدور
             'password' => ['nullable'], 
@@ -62,6 +65,7 @@ class AdminUserApiController extends Controller
 
         $user->name = $request->name ?? $user->name;
         $user->email = $request->email ?? $user->email;
+        $user->phone = $request->phone ?? $user->phone;
         $user->role = $request->role ?? $user->role; 
         if (!empty($request->password)) {
             $user->password = Hash::make($request->password);

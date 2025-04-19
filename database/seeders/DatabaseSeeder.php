@@ -19,12 +19,14 @@ class DatabaseSeeder extends Seeder
             'name' => 'Admin User',
             'email' => 'admin@ex.com',
             'role' => 'admin',
+            'phone' => '123456789',
             'password' => Hash::make('123')
         ]);
 
         User::factory()->create([
             'name' => 'Test User 1',
             'email' => 'user1@ex.com',
+            'phone' => '123456789',
             'role' => 'user',
             'password' => Hash::make('123')
         ]);
@@ -32,6 +34,7 @@ class DatabaseSeeder extends Seeder
         User::factory()->create([
             'name' => 'Test User 2',
             'email' => 'user2@ex.com',
+            'phone' => '123456789',
             'role' => 'user',
             'password' => Hash::make('123')
         ]);

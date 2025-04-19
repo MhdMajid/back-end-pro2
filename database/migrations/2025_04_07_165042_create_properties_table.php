@@ -17,6 +17,8 @@ return new class extends Migration
             $table->enum('type', ['sale', 'rent']); // بيع أو إيجار
             $table->string('location');
             $table->string('address');
+            $table->boolean('is_available_by_admin')->default(true);
+            $table->enum('status', ['active', 'pending', 'sold', 'rented'])->default('active');
             $table->integer('floor_number')->nullable();
             $table->integer('rooms')->default(1);
             $table->integer('bathrooms')->default(1);

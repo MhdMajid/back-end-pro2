@@ -74,6 +74,13 @@ class PropertyController extends Controller
     public function update(Request $request, $id)
     {
         try {
+            if($request->user()->id !== $property->user_id && $request->user()->role !== 'admin') {
+                return response()->json([
+                    'message' => 'غير مصرح لك بتعديل هذا العقار'
+                ], 403);
+            }
+            
+            
             $validator = Validator::make($request->all(), [
                 'title' => 'sometimes|required|string|max:255',
                 'description' => 'sometimes|required|string',
@@ -91,7 +98,7 @@ class PropertyController extends Controller
                 'delete_images' => 'nullable|array',
                 'delete_images.*' => 'exists:property_images,id',
             ]);
-
+            
             if ($validator->fails()) {
                 return response()->json(['errors' => $validator->errors()], 422);
             }
@@ -117,11 +124,142 @@ class PropertyController extends Controller
     /**
      * حذف عقار
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         try {
+            // Get the property first
+            $property = Property::findOrFail($id);
+            
+            // Check permissions before deleting
+            if($request->user()->id !== $property->user_id && $request->user()->role !== 'admin') {
+                return response()->json([
+                    'message' => 'غير مصرح لك بحذف هذا العقار'
+                ], 403);
+            }
+            
+            // Delete the property if authorized
             $this->propertyService->deleteProperty($id);
+            
             return response()->json(['message' => 'تم حذف العقار بنجاح']);
+        } catch (\Exception $e) {
+            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            
+            return response()->json([
+                'message' => $e->getMessage(),
+                'error_code' => $e->getCode()
+            ], $statusCode);
+        }
+    }
+
+    /**
+     * تعديل حالة العقار (تفعيل/تعطيل)
+     */
+    public function updateAvailability(Request $request, $id)
+    {
+        try {
+            $property = Property::findOrFail($id);
+            
+            // التحقق من الصلاحيات: يجب أن يكون المستخدم مالك العقار أو مشرف
+            if($request->user()->id !== $property->user_id && $request->user()->role !== 'admin') {
+                return response()->json([
+                    'message' => 'غير مصرح لك بتعديل حالة هذا العقار'
+                ], 403);
+            }
+            
+            // $validator = Validator::make($request->all(), [
+            //     'is_active' => 'required|boolean',
+            // ]);
+            
+            // if ($validator->fails()) {
+            //     return response()->json(['errors' => $validator->errors()], 422);
+            // }
+            
+            // تحديث حالة العقار
+            if ($request->user()->role === 'admin') {
+                $property->is_available_by_admin = !$property->is_available_by_admin;
+            } else {
+                $property->is_available = !$property->is_available;
+            }
+            
+            $property->save();
+            
+            return response()->json([
+                'message' => 'تم تحديث حالة العقار بنجاح',
+                'property' => $property
+            ]);
+            
+        } catch (\Exception $e) {
+            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            
+            return response()->json([
+                'message' => $e->getMessage(),
+                'error_code' => $e->getCode()
+            ], $statusCode);
+        }
+    }
+    
+    /**
+     * تعديل حالة توفر العقار
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        try {
+            $property = Property::findOrFail($id);
+            
+            // التحقق من الصلاحيات: يجب أن يكون المستخدم مالك العقار أو مشرف
+            if($request->user()->id !== $property->user_id && $request->user()->role !== 'admin') {
+                return response()->json([
+                    'message' => 'غير مصرح لك بتعديل حالة توفر هذا العقار'
+                ], 403);
+            }
+            
+            $validator = Validator::make($request->all(), [
+                'status' => 'required|string|in:active,pending,sold,rented',
+            ]);
+            
+            if ($validator->fails()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+            
+            // تحديث حالة توفر العقار
+            $property->status = $request->status;
+            $property->save();
+            
+            return response()->json([
+                'message' => 'تم تحديث حالة توفر العقار بنجاح',
+                'property' => $property
+            ]);
+            
+        } catch (\Exception $e) {
+            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            
+            return response()->json([
+                'message' => $e->getMessage(),
+                'error_code' => $e->getCode()
+            ], $statusCode);
+        }
+    }
+
+    /**
+     * استرجاع العقارات الخاصة بالمستخدم الحالي
+     */
+    public function getUserProperties(Request $request)
+    {
+        try {
+            // الحصول على المستخدم الحالي
+            $user = $request->user();
+            
+            // استرجاع العقارات الخاصة بالمستخدم مع الصور
+            $properties = Property::with('images')
+                ->where('user_id', $user->id)
+                ->orderBy('created_at', 'desc')
+                ->paginate(10);
+            
+            return response()->json([
+                'properties' => $properties,
+                'message' => 'تم استرجاع العقارات بنجاح'
+            ]);
+            
         } catch (\Exception $e) {
             $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
             

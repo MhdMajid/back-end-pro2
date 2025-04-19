@@ -19,6 +19,8 @@ class Property extends Model
         'address',
         'floor_number',
         'rooms',
+        'status',
+        'is_available_by_admin',
         'bathrooms',
         'area',
         'additional_conditions',

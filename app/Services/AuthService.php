@@ -52,6 +52,7 @@ class AuthService
         // التحقق من البيانات
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8',
             // 'password' => 'required|string|min:8|confirmed',
@@ -64,8 +65,9 @@ class AuthService
         // إنشاء المستخدم
         $user = User::create([
             'name' => $request->name,
-            'email' => $request->email,
-            'role' => 'user',
+            'email' => $request->email, 
+            'phone' => $request->phone, 
+            'role' => 'user', 
             'password' => Hash::make($request->password),
             'email_verified_at' => null,
         ]);

@@ -35,6 +35,10 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::apiResource('properties', PropertyController::class);
 Route::post('properties/{id}', [PropertyController::class, 'update']);
 
+// مسارات تحديث حالة العقار وتوفره
+    Route::post('properties/status/{id}', [PropertyController::class, 'updateStatus']);
+    Route::get('properties/availability/{id}', [PropertyController::class, 'updateAvailability']);
+    Route::get('user/properties', [PropertyController::class, 'getUserProperties']);
 });
 
 Route::get('properties', [PropertyController::class, 'index']);
@@ -46,3 +50,4 @@ Route::middleware(['auth:sanctum', CheckAdminRole::class])->group(function () { 
     Route::get('users/toggle-active/{id}', [AdminUserApiController::class, 'toggleActive']);
     
 });
+
