@@ -51,4 +51,12 @@ class Property extends Model
     {
         return $this->hasOne(PropertyImage::class)->where('is_main', true);
     }
+
+    /**
+     * الحصول على المستخدمين الذين أضافوا هذا العقار للمفضلة.
+     */
+    public function favoritedBy()
+    {
+        return $this->belongsToMany(User::class, 'favorites', 'property_id', 'user_id')->withTimestamps();
+    }
 }

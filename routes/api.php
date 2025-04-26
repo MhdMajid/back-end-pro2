@@ -8,7 +8,7 @@ use App\Http\Controllers\Api\PropertyController;
 use App\Http\Controllers\TestNoti;
 use App\Http\Controllers\PrivateNotificationController;
 use App\Http\Middleware\CheckAdminRole;
-
+use App\Http\Controllers\Api\FavoriteController;
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -49,5 +49,13 @@ Route::middleware(['auth:sanctum', CheckAdminRole::class])->group(function () { 
     Route::post('users/{id}', [AdminUserApiController::class, 'update']);
     Route::get('users/toggle-active/{id}', [AdminUserApiController::class, 'toggleActive']);
     
+});
+
+// مسارات المفضلات
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('favorites', [FavoriteController::class, 'index']);
+    Route::post('favorites/{propertyId}', [FavoriteController::class, 'store']);
+    Route::delete('favorites/{propertyId}', [FavoriteController::class, 'destroy']);
+    Route::get('favorites/check/{propertyId}', [FavoriteController::class, 'check']);
 });
 

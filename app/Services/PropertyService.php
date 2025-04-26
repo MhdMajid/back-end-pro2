@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Property;
 use App\Models\PropertyImage;
+use App\Models\Favorite;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -21,6 +22,9 @@ class PropertyService
         if ($request->has('type')) {
             $query->where('type', $request->type);
         }
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
         
         // تصفية حسب السعر
         if ($request->has('min_price')) {
@@ -36,7 +40,21 @@ class PropertyService
             $query->where('location', 'like', '%' . $request->location . '%');
         }
         
-        return $query->latest()->paginate(10);
+        $properties = $query->latest()->paginate(10);
+        // التحقق مما إذا كان المستخدم مسجل الدخول
+        if (auth('sanctum')->user()) {
+            $userId = auth('sanctum')->user()->id;
+            // الحصول على قائمة العقارات المفضلة للمستخدم
+            $favoritePropertyIds = Favorite::where('user_id', $userId)
+                ->pluck('property_id')
+                ->toArray();
+            // إضافة حقل is_favorite لكل عقار
+            $properties->through(function ($property) use ($favoritePropertyIds) {
+                $property->is_favorite = in_array($property->id, $favoritePropertyIds);
+                return $property;
+            });
+        }
+        return $properties;
     }
 
     /**
@@ -84,7 +102,7 @@ class PropertyService
         $dataToUpdate = $request->only([
             'title', 'description', 'price', 'type', 'location', 
             'address', 'floor_number', 'rooms', 'bathrooms', 
-            'area', 'is_available'
+            'area', 'is_available' , 'status'
         ]);
         
         // معالجة خاصة لحقل additional_conditions

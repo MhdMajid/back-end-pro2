@@ -14,11 +14,11 @@ return new class extends Migration
             $table->string('title');
             $table->text('description');
             $table->decimal('price', 12, 2);
-            $table->enum('type', ['sale', 'rent']); // بيع أو إيجار
+            $table->enum('type', ['sale', 'rent' , 'auction']); // بيع أو إيجار
             $table->string('location');
             $table->string('address');
-            $table->boolean('is_available_by_admin')->default(true);
-            $table->enum('status', ['active', 'pending', 'sold', 'rented'])->default('active');
+            $table->boolean('is_available_by_admin')->default(false);
+            $table->enum('status', ['active','inactive', 'pending', 'sold', 'rented'])->default('inactive');
             $table->integer('floor_number')->nullable();
             $table->integer('rooms')->default(1);
             $table->integer('bathrooms')->default(1);

@@ -48,4 +48,20 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    /**
+     * الحصول على العقارات المفضلة للمستخدم.
+     */
+    public function favorites()
+    {
+        return $this->hasMany(Favorite::class);
+    }
+
+    /**
+     * الحصول على العقارات المفضلة للمستخدم.
+     */
+    public function favoriteProperties()
+    {
+        return $this->belongsToMany(Property::class, 'favorites', 'user_id', 'property_id')->withTimestamps();
+    }
 }

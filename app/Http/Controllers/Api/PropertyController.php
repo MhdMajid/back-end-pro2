@@ -23,6 +23,7 @@ class PropertyController extends Controller
     public function index(Request $request)
     {
         $properties = $this->propertyService->getFilteredProperties($request);
+        
         return response()->json($properties);
     }
 
@@ -35,7 +36,7 @@ class PropertyController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'price' => 'required|numeric|min:0',
-            'type' => 'required|in:sale,rent',
+            'type' => 'required|in:sale,rent,auction',
             'location' => 'required|string|max:255',
             'address' => 'required|string|max:255',
             'floor_number' => 'nullable|integer|min:0',
@@ -74,6 +75,7 @@ class PropertyController extends Controller
     public function update(Request $request, $id)
     {
         try {
+            $property = Property::findOrFail($id);
             if($request->user()->id !== $property->user_id && $request->user()->role !== 'admin') {
                 return response()->json([
                     'message' => 'غير مصرح لك بتعديل هذا العقار'
@@ -85,7 +87,7 @@ class PropertyController extends Controller
                 'title' => 'sometimes|required|string|max:255',
                 'description' => 'sometimes|required|string',
                 'price' => 'sometimes|required|numeric|min:0',
-                'type' => 'sometimes|required|in:sale,rent',
+                'type' => 'sometimes|required|in:sale,rent,auction',
                 'location' => 'sometimes|required|string|max:255',
                 'address' => 'sometimes|required|string|max:255',
                 'floor_number' => 'nullable|integer|min:0',
@@ -96,6 +98,7 @@ class PropertyController extends Controller
                 'new_images' => 'nullable|array',
                 'new_images.*' => 'image|mimes:jpeg,png,jpg|max:2048',
                 'delete_images' => 'nullable|array',
+                'status' => 'sometimes|required|in:active,inactive,pending,sold,rented',
                 'delete_images.*' => 'exists:property_images,id',
             ]);
             
