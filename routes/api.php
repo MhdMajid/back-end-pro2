@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AdminUserApiController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\PropertyController;
+use App\Http\Controllers\Api\PurchaseController;
 use App\Http\Controllers\TestNoti;
 use App\Http\Controllers\PrivateNotificationController;
 use App\Http\Middleware\CheckAdminRole;
@@ -57,5 +58,28 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('favorites/{propertyId}', [FavoriteController::class, 'store']);
     Route::delete('favorites/{propertyId}', [FavoriteController::class, 'destroy']);
     Route::get('favorites/check/{propertyId}', [FavoriteController::class, 'check']);
+});
+
+// مسارات طلبات شراء العقارات
+Route::middleware('auth:sanctum')->group(function () {
+    // عرض قائمة طلبات الشراء للمستخدم الحالي
+    Route::get('purchase-requests', [PurchaseController::class, 'index']);
+    
+    // إنشاء طلب شراء جديد
+    Route::post('purchase-requests/{propertyId}', [PurchaseController::class, 'store']);
+    
+    // عرض تفاصيل طلب شراء
+    Route::get('purchase-requests/{id}', [PurchaseController::class, 'show']);
+    
+    // تحديث حالة طلب الشراء
+    Route::post('purchase-requests/update/{id}', [PurchaseController::class, 'update']);
+    
+    // إضافة دفعة جديدة لطلب الشراء
+    Route::post('purchase-requests/{id}/payments', [PurchaseController::class, 'addPayment']);
+    
+    // التحقق من دفعة (للمشرفين فقط)
+    Route::middleware(CheckAdminRole::class)->group(function () {
+        Route::post('payments/{paymentId}/verify', [PurchaseController::class, 'verifyPayment']);
+    });
 });
 
