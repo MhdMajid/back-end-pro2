@@ -10,6 +10,7 @@ use App\Http\Controllers\TestNoti;
 use App\Http\Controllers\PrivateNotificationController;
 use App\Http\Middleware\CheckAdminRole;
 use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\AuctionController;
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -81,5 +82,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware(CheckAdminRole::class)->group(function () {
         Route::post('payments/{paymentId}/verify', [PurchaseController::class, 'verifyPayment']);
     });
+});
+
+// مسارات نظام المزادات
+
+Route::get('auctions', [AuctionController::class, 'index']);
+Route::get('auctions/{id}', [AuctionController::class, 'show']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    // عرض مزادات المستخدم الحالي
+    Route::get('user/auctions', [AuctionController::class, 'userAuctions']);
+    
+    // إنشاء مزاد جديد
+    Route::post('auctions/{propertyId}', [AuctionController::class, 'store']);
+    
+    // تحديث حالة المزاد
+    Route::post('auctions/status/{id}', [AuctionController::class, 'updateStatus']);
+    
+    // تقديم عرض في المزاد
+    Route::post('auctions/{id}/bids', [AuctionController::class, 'placeBid']);
 });
 
