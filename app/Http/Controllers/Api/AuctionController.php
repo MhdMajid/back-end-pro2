@@ -77,7 +77,7 @@ class AuctionController extends Controller
             $auction = $this->auctionService->createAuction($request, $propertyId);
             return response()->json(['status' => 'success', 'data' => $auction], 201);
         } catch (\Exception $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], $e->getCode() ?: 500);
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -99,7 +99,7 @@ class AuctionController extends Controller
             $auction = $this->auctionService->updateAuctionStatus($request, $id);
             return response()->json(['status' => 'success', 'data' => $auction]);
         } catch (\Exception $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], $e->getCode() ?: 500);
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()],  500);
         }
     }
 
@@ -121,7 +121,7 @@ class AuctionController extends Controller
             $bid = $this->auctionService->placeBid($request, $id);
             return response()->json(['status' => 'success', 'data' => $bid], 201);
         } catch (\Exception $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], $e->getCode() ?: 500);
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
 }

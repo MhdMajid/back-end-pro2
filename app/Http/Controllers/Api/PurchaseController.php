@@ -48,7 +48,7 @@ class PurchaseController extends Controller
             $validator = Validator::make($request->all(), [
                 'payment_method' => 'required|string|in:bank_transfer,cash,credit_card',
                 'notes' => 'nullable|string',
-                'payment_proof' => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+                'payment_proof' => 'required|file|mimes:jpeg,png,jpg,pdf|max:2048',
             ]);
             
             if ($validator->fails()) {

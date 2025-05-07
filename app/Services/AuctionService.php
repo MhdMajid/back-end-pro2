@@ -54,6 +54,7 @@ class AuctionService
                 'end_date' => $request->end_date,
                 'status' => 'draft',
                 'admin_notes' => $request->admin_notes,
+                'winner_id' => null
             ]);
             
             $auction->save();
@@ -61,7 +62,7 @@ class AuctionService
             // إنشاء سجل الحالة
             $statusLog = new AuctionStatusLog([
                 'auction_id' => $auction->id,
-                'status' => 'draft',
+                'new_status' => 'draft',
                 'notes' => 'تم إنشاء المزاد',
                 'changed_by' => $user->id,
             ]);
@@ -138,7 +139,8 @@ class AuctionService
             // إنشاء سجل الحالة
             $statusLog = new AuctionStatusLog([
                 'auction_id' => $auction->id,
-                'status' => $request->status,
+                'new_status' => $request->status,
+                'old_status' => $oldStatus,
                 'notes' => $request->notes ?? 'تم تحديث حالة المزاد من ' . $oldStatus . ' إلى ' . $request->status,
                 'changed_by' => $user->id,
             ]);
@@ -149,7 +151,8 @@ class AuctionService
             $property = $auction->property;
             
             if ($request->status === 'active') {
-                $property->status = 'in_auction';
+                // $property->status = 'in_auction';
+                $property->status = 'pending';
             } else if ($request->status === 'ended') {
                 if ($auction->winner_id) {
                     $property->status = 'sold';
@@ -179,7 +182,7 @@ class AuctionService
     {
         $user = $request->user();
         $auction = Auction::findOrFail($auctionId);
-        
+        $oldStatus = $auction->status;
         // التحقق من أن المزاد نشط
         if (!$auction->isActive()) {
             throw new \Exception('المزاد غير نشط حاليًا', 422);
@@ -222,7 +225,8 @@ class AuctionService
             // إنشاء سجل الحالة
             $statusLog = new AuctionStatusLog([
                 'auction_id' => $auctionId,
-                'status' => $auction->status,
+                'new_status' => $auction->status,
+                'old_status' => $oldStatus ,
                 'notes' => 'تم تقديم عرض جديد بقيمة ' . $request->amount . ' من المستخدم ' . $user->name,
                 'changed_by' => $user->id,
             ]);

@@ -14,14 +14,17 @@ return new class extends Migration
         Schema::create('auctions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('property_id')->constrained('properties')->onDelete('cascade');
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->decimal('starting_price', 12, 2);
-            $table->decimal('current_price', 12, 2)->nullable();
+            $table->foreignId('winner_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->decimal('start_price', 12, 2);
+            $table->decimal('min_increment', 12, 2)->nullable();
             $table->decimal('reserve_price', 12, 2)->nullable();
+            $table->decimal('winning_bid_amount', 12, 2)->nullable();
             $table->dateTime('start_date');
             $table->dateTime('end_date');
-            $table->enum('status', ['pending', 'active', 'ended', 'cancelled'])->default('pending');
+            $table->enum('status', ['pending', 'active', 'ended', 'cancelled' , 'draft'])->default('pending');
             $table->text('description')->nullable();
+            $table->text('title')->nullable();
+            $table->text('admin_notes')->nullable();
             $table->timestamps();
         });
     }

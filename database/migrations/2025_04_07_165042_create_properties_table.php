@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('location');
             $table->string('address');
             $table->boolean('is_available_by_admin')->default(false);
-            $table->enum('status', ['active','inactive', 'pending', 'sold', 'rented'])->default('inactive');
+            $table->enum('status', ['active','inactive', 'pending', 'sold', 'rented'])->default('active');
             $table->integer('floor_number')->nullable();
             $table->integer('rooms')->default(1);
             $table->integer('bathrooms')->default(1);

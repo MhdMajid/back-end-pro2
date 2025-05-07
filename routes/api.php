@@ -11,6 +11,7 @@ use App\Http\Controllers\PrivateNotificationController;
 use App\Http\Middleware\CheckAdminRole;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\AuctionController;
+use App\Http\Controllers\DashboardController;
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -98,6 +99,13 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // تحديث حالة المزاد
     Route::post('auctions/status/{id}', [AuctionController::class, 'updateStatus']);
+
+    // مسارات لوحة التحكم
+    Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
+    Route::get('/dashboard/properties/stats', [DashboardController::class, 'getPropertyStats']);
+    Route::get('/dashboard/auctions/stats', [DashboardController::class, 'getAuctionStats']);
+    Route::get('/dashboard/users/stats', [DashboardController::class, 'getUserStats']);
+    Route::get('/dashboard/payments/stats', [DashboardController::class, 'getPaymentStats']);
     
     // تقديم عرض في المزاد
     Route::post('auctions/{id}/bids', [AuctionController::class, 'placeBid']);

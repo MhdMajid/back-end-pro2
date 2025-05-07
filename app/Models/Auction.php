@@ -30,7 +30,7 @@ class Auction extends Model
         'start_date' => 'datetime',
         'end_date' => 'datetime',
     ];
-
+    
     // العلاقة مع العقار
     public function property()
     {

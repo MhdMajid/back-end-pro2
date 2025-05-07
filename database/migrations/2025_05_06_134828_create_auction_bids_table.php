@@ -15,8 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('auction_id')->constrained('auctions')->onDelete('cascade');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->decimal('bid_amount', 12, 2);
-            $table->boolean('is_winning')->default(false);
+            $table->decimal('amount', 12, 2);
+            $table->enum('status', ['active', 'outbid', 'winning', 'cancelled'])->default('active');
             $table->text('notes')->nullable();
             $table->timestamps();
         });
