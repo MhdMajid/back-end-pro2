@@ -77,9 +77,12 @@ class AuthService
 
         return response()->json([
             'message' => 'تم التسجيل بنجاح.',
-            'user' => $user
+            'user' => $user,
+            'token' => $user->createToken('auth_token')->plainTextToken
         ], 201);
     }
+
+
     public function changePassword(Request $request)
     {
         $validator = Validator::make($request->all(), [

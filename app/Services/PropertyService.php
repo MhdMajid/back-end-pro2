@@ -40,10 +40,21 @@ class PropertyService
             $query->where('location', 'like', '%' . $request->location . '%');
         }
         
+        // تصفية حسب المستخدم (العقارات الخاصة بالمستخدم)
+        if ($request->has('user_id')) {
+            $query->where('user_id', $request->user_id);
+        }
+        
+        // تصفية العقارات الخاصة بالمستخدم الحالي
+        if ($request->has('my_properties') && $request->my_properties && auth('sanctum')->check()) {
+            $query->where('user_id', auth('sanctum')->id());
+        }
+        
         $properties = $query->latest()->paginate(10);
         // التحقق مما إذا كان المستخدم مسجل الدخول
         if (auth('sanctum')->user()) {
             $userId = auth('sanctum')->user()->id;
+            
             // الحصول على قائمة العقارات المفضلة للمستخدم
             $favoritePropertyIds = Favorite::where('user_id', $userId)
                 ->pluck('property_id')
