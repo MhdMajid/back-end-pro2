@@ -20,29 +20,41 @@ class PropertyService
         
         // تصفية حسب النوع (بيع/إيجار)
         if ($request->has('type')) {
-            $query->where('type', $request->type);
+            if($request->type !== null){
+                $query->where('type', $request->type);
+            }
         }
         if ($request->has('status')) {
-            $query->where('status', $request->status);
+            if($request->status !== null){
+                $query->where('status', $request->status);
+            }
         }
         
         // تصفية حسب السعر
         if ($request->has('min_price')) {
-            $query->where('price', '>=', $request->min_price);
+            if($request->min_price !== null){
+                $query->where('price', '>=', $request->min_price);
+            }
         }
         
         if ($request->has('max_price')) {
-            $query->where('price', '<=', $request->max_price);
+            if($request->max_price !== null){
+                $query->where('price', '<=', $request->max_price);
+            }
         }
         
         // تصفية حسب الموقع
         if ($request->has('location')) {
-            $query->where('location', 'like', '%' . $request->location . '%');
+            if($request->location !== null){
+                $query->where('location', 'like', '%' . $request->location . '%');
+            }
         }
         
         // تصفية حسب المستخدم (العقارات الخاصة بالمستخدم)
         if ($request->has('user_id')) {
-            $query->where('user_id', $request->user_id);
+            if($request->user_id !== null){
+                $query->where('user_id', $request->user_id);
+            }
         }
         
         // تصفية العقارات الخاصة بالمستخدم الحالي

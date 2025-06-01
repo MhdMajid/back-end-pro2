@@ -23,7 +23,7 @@ class PurchaseService
         $buyer = $request->user();
         
         // التحقق من أن العقار متاح للبيع
-        if ($property->status !== 'active' || $property->type !== 'sale') {
+        if ($property->status !== 'active' ) {
             throw new \Exception('هذا العقار غير متاح للبيع حاليًا', 422);
         }
         
