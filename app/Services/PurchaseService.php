@@ -6,6 +6,8 @@ use App\Models\Property;
 use App\Models\PropertyPurchaseRequest;
 use App\Models\PurchasePayment;
 use App\Models\PurchaseStatusLog;
+use App\Enum\PurchaseStatus;
+use App\Enum\PropertyStatus;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,9 +24,12 @@ class PurchaseService
         $property = Property::findOrFail($propertyId);
         $buyer = $request->user();
         
+        // تحويل status من string إلى enum
+        $status = PurchaseStatus::from($property->status);
+        
         // التحقق من أن العقار متاح للبيع
-        if ($property->status !== 'active' ) {
-            throw new \Exception('هذا العقار غير متاح للبيع حاليًا', 422);
+        if (!$status->canBePurchased()) {
+            throw new \Exception($status->getMessage(), 422);
         }
         
         // التحقق من أن المشتري ليس هو البائع
@@ -35,7 +40,11 @@ class PurchaseService
         // التحقق من عدم وجود طلب شراء سابق للعقار من نفس المشتري
         $existingRequest = PropertyPurchaseRequest::where('property_id', $propertyId)
             ->where('buyer_id', $buyer->id)
-            ->whereIn('status', ['pending', 'approved', 'in_progress'])
+            ->whereIn('status', [
+                PurchaseStatus::PENDING->value,
+                PurchaseStatus::APPROVED->value,
+                PurchaseStatus::InProgress->value
+            ])
             ->first();
             
         if ($existingRequest) {
@@ -57,7 +66,7 @@ class PurchaseService
                 'down_payment_amount' => $downPaymentAmount,
                 'total_amount' => $property->price,
                 'payment_method' => $request->payment_method,
-                'status' => 'pending',
+                'status' => PurchaseStatus::PENDING->value,
                 'buyer_notes' => $request->notes,
             ]);
             
@@ -76,7 +85,7 @@ class PurchaseService
                     'payment_method' => $request->payment_method,
                     'payment_date' => now(),
                     'payment_proof' => $path,
-                    'status' => 'pending',
+                    'status' => PurchaseStatus::PENDING->value,
                     'notes' => 'دفعة مقدمة',
                 ]);
                 
@@ -86,7 +95,7 @@ class PurchaseService
             // إنشاء سجل الحالة
             $statusLog = new PurchaseStatusLog([
                 'purchase_request_id' => $purchaseRequest->id,
-                'status' => 'pending',
+                'status' => PurchaseStatus::PENDING->value,
                 'notes' => 'تم إنشاء طلب الشراء',
                 'changed_by' => $buyer->id,
             ]);
@@ -94,7 +103,7 @@ class PurchaseService
             $statusLog->save();
             
             // تحديث حالة العقار إلى معلق
-            $property->status = 'pending';
+            $property->status = PropertyStatus::PENDING->value;
             $property->save();
             
             DB::commit();
@@ -120,23 +129,21 @@ class PurchaseService
             throw new \Exception('غير مصرح لك بتحديث هذا الطلب', 403);
         }
         
-        // التحقق من أن الحالة الجديدة صالحة
-        $validStatuses = ['pending', 'approved', 'in_progress', 'completed', 'rejected', 'cancelled'];
-        if (!in_array($request->status, $validStatuses)) {
-            throw new \Exception('حالة غير صالحة', 422);
-        }
+        // تحويل الحالة المطلوبة إلى enum
+        $newStatus = PurchaseStatus::from($request->status);
+        $currentStatus = PurchaseStatus::from($purchaseRequest->status);
         
         // قيود إضافية على تغيير الحالة
         if ($user->role !== 'admin') {
             // المشتري يمكنه فقط إلغاء الطلب إذا كان معلقًا
-            if ($user->id === $purchaseRequest->buyer_id && $request->status !== 'cancelled') {
+            if ($user->id === $purchaseRequest->buyer_id && $newStatus !== PurchaseStatus::CANCELLED) {
                 throw new \Exception('يمكنك فقط إلغاء الطلب', 403);
             }
             
             // البائع يمكنه فقط قبول أو رفض الطلب إذا كان معلقًا
             if ($user->id === $purchaseRequest->seller_id && 
-                !in_array($request->status, ['approved', 'rejected']) && 
-                $purchaseRequest->status === 'pending') {
+                !in_array($newStatus, [PurchaseStatus::APPROVED, PurchaseStatus::CANCELLED]) && 
+                $currentStatus === PurchaseStatus::PENDING) {
                 throw new \Exception('يمكنك فقط قبول أو رفض الطلب', 403);
             }
         }
@@ -146,13 +153,13 @@ class PurchaseService
         try {
             // تحديث حالة الطلب
             $oldStatus = $purchaseRequest->status;
-            $purchaseRequest->status = $request->status;
+            $purchaseRequest->status = $newStatus->value;
             
             if ($request->has('admin_notes')) {
                 $purchaseRequest->admin_notes = $request->admin_notes;
             }
             
-            if ($request->status === 'completed') {
+            if ($newStatus === PurchaseStatus::COMPLETED) {
                 $purchaseRequest->completion_date = now();
             }
             
@@ -174,8 +181,8 @@ class PurchaseService
             // إنشاء سجل الحالة
             $statusLog = new PurchaseStatusLog([
                 'purchase_request_id' => $purchaseRequest->id,
-                'status' => $request->status,
-                'notes' => $request->notes ?? 'تم تحديث حالة الطلب من ' . $oldStatus . ' إلى ' . $request->status,
+                'status' => $newStatus->value,
+                'notes' => $request->notes ?? 'تم تحديث حالة الطلب من ' . $oldStatus . ' إلى ' . $newStatus->value,
                 'changed_by' => $user->id,
             ]);
             
@@ -195,10 +202,15 @@ class PurchaseService
             // تحديث حالة العقار إذا لزم الأمر
             $property = $purchaseRequest->property;
             
-            if ($request->status === 'completed') {
-                $property->status = 'sold';
-            } else if ($request->status === 'cancelled' || $request->status === 'rejected') {
-                $property->status = 'active';
+            if ($newStatus === PurchaseStatus::COMPLETED) {
+                if($property->type === 'rent'){
+                    $property->status = PropertyStatus::RENTED->value;
+                }else{
+                    $property->status = PropertyStatus::SOLD->value;
+                }
+
+            } else if (in_array($newStatus, [PurchaseStatus::CANCELLED, PurchaseStatus::CANCELLED])) {
+                $property->status = PropertyStatus::ACTIVE->value;
             }
             
             $property->save();
@@ -220,6 +232,7 @@ class PurchaseService
     {
         $user = $request->user();
         $purchaseRequest = PropertyPurchaseRequest::findOrFail($purchaseId);
+        $currentStatus = PurchaseStatus::from($purchaseRequest->status);
         
         // التحقق من أن المستخدم هو المشتري
         if ($user->id !== $purchaseRequest->buyer_id) {
@@ -227,7 +240,7 @@ class PurchaseService
         }
         
         // التحقق من أن الطلب في حالة تسمح بإضافة دفعات
-        if (!in_array($purchaseRequest->status, ['approved', 'in_progress'])) {
+        if (!in_array($currentStatus, [PurchaseStatus::APPROVED, PurchaseStatus::InProgress])) {
             throw new \Exception('لا يمكن إضافة دفعة لطلب في هذه الحالة', 422);
         }
         
@@ -247,7 +260,7 @@ class PurchaseService
                 'payment_method' => $request->payment_method,
                 'payment_date' => now(),
                 'payment_proof' => $path,
-                'status' => 'pending',
+                'status' => PurchaseStatus::PENDING->value,
                 'notes' => $request->notes ?? 'دفعة إضافية',
             ]);
             
@@ -256,7 +269,7 @@ class PurchaseService
             // إنشاء سجل الحالة
             $statusLog = new PurchaseStatusLog([
                 'purchase_request_id' => $purchaseId,
-                'status' => $purchaseRequest->status,
+                'status' => $currentStatus->value,
                 'notes' => 'تم إضافة دفعة جديدة بقيمة ' . $request->amount,
                 'changed_by' => $user->id,
             ]);
@@ -287,6 +300,7 @@ class PurchaseService
         
         $payment = PurchasePayment::findOrFail($paymentId);
         $purchaseRequest = $payment->purchaseRequest;
+        $currentStatus = PurchaseStatus::from($purchaseRequest->status);
         
         DB::beginTransaction();
         
@@ -300,7 +314,7 @@ class PurchaseService
             // إنشاء سجل الحالة
             $statusLog = new PurchaseStatusLog([
                 'purchase_request_id' => $purchaseRequest->id,
-                'status' => $purchaseRequest->status,
+                'status' => $currentStatus->value,
                 'notes' => 'تم ' . ($request->status === 'verified' ? 'التحقق من' : 'رفض') . ' الدفعة بقيمة ' . $payment->amount,
                 'changed_by' => $user->id,
             ]);
@@ -315,19 +329,28 @@ class PurchaseService
                 
                 // إذا تم دفع المبلغ بالكامل، يتم تحديث حالة الطلب إلى مكتمل
                 if ($totalVerifiedPayments >= $purchaseRequest->total_amount) {
-                    $purchaseRequest->status = 'completed';
+                    $purchaseRequest->status = PurchaseStatus::COMPLETED->value;
                     $purchaseRequest->completion_date = now();
                     $purchaseRequest->save();
                     
                     // تحديث حالة العقار
                     $property = $purchaseRequest->property;
-                    $property->status = 'sold';
+
+
+                    // $property->status = PurchaseStatus::COMPLETED->value;
+
+                    if($property->type === 'rent'){
+                        $property->status = PropertyStatus::RENTED->value;
+                    }else{
+                        $property->status = PropertyStatus::SOLD->value;
+                    }
+
                     $property->save();
                     
                     // إنشاء سجل الحالة
                     $completionLog = new PurchaseStatusLog([
                         'purchase_request_id' => $purchaseRequest->id,
-                        'status' => 'completed',
+                        'status' => PurchaseStatus::COMPLETED->value,
                         'notes' => 'تم اكتمال الدفع وإتمام عملية الشراء',
                         'changed_by' => $user->id,
                     ]);
@@ -361,13 +384,28 @@ class PurchaseService
                 ->paginate(10);
         } else {
             // المستخدم العادي يرى طلباته كمشتري أو كبائع
-            return PropertyPurchaseRequest::with(['property', 'buyer', 'seller', 'payments', 'statusLogs'])
-                ->where(function ($query) use ($user) {
-                    $query->where('buyer_id', $user->id)
-                        ->orWhere('seller_id', $user->id);
-                })
-                ->orderBy('created_at', 'desc')
-                ->paginate(10);
+            if ($request->has('buyer')) {
+                return PropertyPurchaseRequest::with(['property', 'buyer', 'seller', 'payments', 'statusLogs'])
+                    ->where('buyer_id', $user->id)
+                    ->orderBy('created_at', 'desc')
+                    ->paginate(10);
+            }
+            
+            if ($request->has('seller')) {
+                return PropertyPurchaseRequest::with(['property', 'buyer', 'seller', 'payments', 'statusLogs'])
+                    ->where('seller_id', $user->id)
+                    ->orderBy('created_at', 'desc')
+                    ->paginate(10);
+            }
+            
+            // إذا لم يتم تحديد نوع الطلبات، نرجع جميع طلبات المستخدم
+            // return PropertyPurchaseRequest::with(['property', 'buyer', 'seller', 'payments', 'statusLogs'])
+            //     ->where(function ($query) use ($user) {
+            //         $query->where('buyer_id', $user->id)
+            //             ->orWhere('seller_id', $user->id);
+            //     })
+            //     ->orderBy('created_at', 'desc')
+            //     ->paginate(10);
         }
     }
     
@@ -377,6 +415,8 @@ class PurchaseService
     public function getPurchaseRequestDetails($purchaseId, Request $request)
     {
         $user = $request->user();
+        
+        // جلب طلب الشراء أولاً
         $purchaseRequest = PropertyPurchaseRequest::with(['property', 'buyer', 'seller', 'payments', 'statusLogs.changedByUser'])
             ->findOrFail($purchaseId);
         
