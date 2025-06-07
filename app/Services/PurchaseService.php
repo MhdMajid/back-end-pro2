@@ -370,7 +370,7 @@ class PurchaseService
     }
     
     /**
-     * الحصول على طلبات الشراء للمستخدم
+     * الحصول على طلبات الشراء و البيع  للمستخدم
      */
     public function getUserPurchaseRequests(Request $request)
     {
@@ -426,5 +426,73 @@ class PurchaseService
         }
         
         return $purchaseRequest;
+    }
+    
+    /**
+     * الحصول على جميع المدفوعات
+     */
+    public function getAllPayments(Request $request)
+    {
+        $user = $request->user();
+        
+        // البحث عن المدفوعات حسب دور المستخدم
+        if ($user->role === 'admin') {
+            // المشرف يرى جميع المدفوعات
+            $query = PurchasePayment::with(['purchaseRequest.property', 'purchaseRequest.buyer', 'purchaseRequest.seller']);
+            
+            // تطبيق فلتر الحالة إذا تم تحديدها
+            if ($request->has('status')) {
+                $query->where('status', $request->status);
+            }
+            
+            return $query->orderBy('created_at', 'desc')
+                ->paginate(10);
+        } else {
+            // المستخدم العادي يرى مدفوعاته كمشتري أو كبائع
+            if ($request->has('buyer')) {
+                $query = PurchasePayment::with(['purchaseRequest.property', 'purchaseRequest.buyer', 'purchaseRequest.seller'])
+                    ->whereHas('purchaseRequest', function ($query) use ($user) {
+                        $query->where('buyer_id', $user->id);
+                    });
+                
+                // تطبيق فلتر الحالة إذا تم تحديدها
+                if ($request->has('status')) {
+                    $query->where('status', $request->status);
+                }
+                
+                return $query->orderBy('created_at', 'desc')
+                    ->paginate(10);
+            }
+            
+            if ($request->has('seller')) {
+                $query = PurchasePayment::with(['purchaseRequest.property', 'purchaseRequest.buyer', 'purchaseRequest.seller'])
+                    ->whereHas('purchaseRequest', function ($query) use ($user) {
+                        $query->where('seller_id', $user->id);
+                    });
+                
+                // تطبيق فلتر الحالة إذا تم تحديدها
+                if ($request->has('status')) {
+                    $query->where('status', $request->status);
+                }
+                
+                return $query->orderBy('created_at', 'desc')
+                    ->paginate(10);
+            }
+            
+            // إذا لم يتم تحديد نوع المدفوعات، نرجع جميع مدفوعات المستخدم
+            $query = PurchasePayment::with(['purchaseRequest.property', 'purchaseRequest.buyer', 'purchaseRequest.seller'])
+                ->whereHas('purchaseRequest', function ($query) use ($user) {
+                    $query->where('buyer_id', $user->id)
+                        ->orWhere('seller_id', $user->id);
+                });
+            
+            // تطبيق فلتر الحالة إذا تم تحديدها
+            if ($request->has('status')) {
+                $query->where('status', $request->status);
+            }
+            
+            return $query->orderBy('created_at', 'desc')
+                ->paginate(10);
+        }
     }
 }

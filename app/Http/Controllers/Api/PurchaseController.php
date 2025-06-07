@@ -195,4 +195,27 @@ class PurchaseController extends Controller
             ], $statusCode);
         }
     }
+
+    /**
+     * عرض قائمة المدفوعات للمستخدم الحالي
+     */
+    public function payments(Request $request)
+    {
+        try {
+            $payments = $this->purchaseService->getAllPayments($request);
+            
+            return response()->json([
+                'payments' => $payments,
+                'message' => 'تم استرجاع المدفوعات بنجاح'
+            ]);
+            
+        } catch (\Exception $e) {
+            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+            
+            return response()->json([
+                'message' => $e->getMessage(),
+                'error_code' => $e->getCode()
+            ], $statusCode);
+        }
+    }
 }

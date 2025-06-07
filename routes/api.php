@@ -67,6 +67,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // عرض قائمة طلبات الشراء للمستخدم الحالي
     Route::get('purchase-requests', [PurchaseController::class, 'index']);
     
+    // عرض قائمة المدفوعات للمستخدم الحالي
+    Route::get('payments', [PurchaseController::class, 'payments']);
+    
     // إنشاء طلب شراء جديد
     Route::post('purchase-requests/{propertyId}', [PurchaseController::class, 'store']);
     
